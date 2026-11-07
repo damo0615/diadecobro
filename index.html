@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ff4136">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;800&family=Open+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<title>Día de Cobro</title>
+<style>
+:root{--r:#ff3b30;--o:#ff9a4d;--g:linear-gradient(90deg,#ff3b30,#ff9a4d);--gv:linear-gradient(180deg,#ff3b30,#ff9a4d);--ok:#1f9d55}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#fff;color:var(--r);font-family:'Open Sans',system-ui,sans-serif}
+#app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:calc(90px + env(safe-area-inset-bottom))}
+header{background:var(--gv);color:#fff;border-radius:0 0 22px 22px;padding:calc(18px + env(safe-area-inset-top)) 20px 20px}
+h1{font:800 44px/1.1 Montserrat,sans-serif;margin:0}
+.sub{font:500 20px Montserrat,sans-serif}
+.sub u{text-underline-offset:3px}
+.big{display:flex;align-items:baseline;justify-content:space-between}
+.big b{font:800 92px/1 Montserrat,sans-serif}.big span{font:500 28px Montserrat}
+.btn-w{display:flex;align-items:center;gap:8px;background:#fff;color:var(--r);border:0;border-radius:12px;font:800 13px/1.1 'Open Sans';padding:10px 14px;margin:14px 0 0 auto;text-align:left;cursor:pointer}
+.btn-w i{font:400 32px/1 sans-serif}
+h2{font:500 22px Montserrat;text-decoration:underline;text-underline-offset:4px;margin:14px 10px 8px}
+.card{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 10px 10px;padding:11px 14px;border:1px solid transparent;border-radius:10px;background:linear-gradient(#fff,#fff) padding-box,var(--g) border-box;font-size:14px;cursor:pointer;width:calc(100% - 20px);text-align:left;color:var(--r);font-family:inherit}
+.card small{color:var(--o);font-size:13px;display:block}
+.card .amt{font:800 22px 'Open Sans';white-space:nowrap}
+.card .amt.p{color:var(--ok)}
+.mov{font-size:13px}.mov .t{color:var(--o)}
+.center{text-align:center}
+.btn{background:var(--g);color:#fff;border:0;border-radius:8px;font:800 13px 'Open Sans';padding:10px 18px;cursor:pointer;text-transform:uppercase}
+.btn.alt{background:#fff;color:var(--r);border:1px solid var(--r)}
+.empty{text-align:center;color:var(--o);padding:24px 20px;font-size:14px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid transparent;border-image:var(--g) 1;display:flex;justify-content:space-around;padding:8px 0 calc(8px + env(safe-area-inset-bottom));max-width:480px;margin:auto}
+nav button{background:none;border:0;color:var(--r);font:500 10px 'Open Sans';display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;flex:1}
+nav svg{width:38px;height:38px;fill:none;stroke:var(--r);stroke-width:1.6;stroke-linejoin:round}
+nav .on svg{fill:var(--r)}
+.fab{position:fixed;right:max(16px,calc(50% - 224px));bottom:calc(86px + env(safe-area-inset-bottom));background:var(--g);color:#fff;border:0;border-radius:28px;padding:14px 18px;font:800 13px 'Open Sans';box-shadow:0 4px 14px rgba(255,59,48,.4);cursor:pointer}
+.back{background:none;border:0;color:#fff;font:600 14px 'Open Sans';padding:0 0 8px;cursor:pointer}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:10}
+.sheet{background:#fff;width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
+.sheet h3{font:800 22px Montserrat;margin:0 0 12px}
+label{display:block;font:600 13px 'Open Sans';margin:10px 0 4px}
+input,select{width:100%;padding:11px;border:1px solid var(--o);border-radius:8px;font:16px 'Open Sans';color:#333;background:#fff}
+.seg{display:flex;gap:8px}.seg button{flex:1;padding:10px;border-radius:8px;border:1px solid var(--r);background:#fff;color:var(--r);font:800 14px 'Open Sans';cursor:pointer}
+.seg button.on{background:var(--g);color:#fff;border-color:transparent}
+.row{display:flex;gap:8px;margin-top:16px}.row .btn{flex:1}
+.danger{color:#b00020!important;border-color:#b00020!important}
+@media(prefers-reduced-motion:no-preference){.sheet{animation:up .2s ease-out}@keyframes up{from{transform:translateY(30px);opacity:0}}}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #333;outline-offset:2px}
+</style></head><body>
+<div id="app"></div>
+<script>
+// ---------- Datos (localStorage) ----------
+const KEY='cobros:v1';
+let db={clientes:[],productos:[],movimientos:[]};
+try{const s=localStorage.getItem(KEY);if(s)db=JSON.parse(s)}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){alert('No se pudo guardar: almacenamiento lleno o bloqueado.')}};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>(Math.round(n*100)/100).toString().replace('.',',')+'$';
+const fdate=d=>{const x=new Date(d);return [x.getDate(),x.getMonth()+1,x.getFullYear()%100].map(v=>String(v).padStart(2,'0')).join('/')};
+const cliente=id=>db.clientes.find(c=>c.id===id);
+const saldo=id=>db.movimientos.filter(m=>m.clienteId===id).reduce((a,m)=>a+(m.tipo==='deuda'?m.monto:-m.monto),0);
+const total=()=>db.clientes.reduce((a,c)=>a+Math.max(0,saldo(c.id)),0);
+const movsDe=id=>db.movimientos.filter(m=>m.clienteId===id).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+const movLine=m=>`${fdate(m.fecha)} | ${esc((cliente(m.clienteId)?.nombre||'?').toUpperCase())} | ${esc(m.tipo==='deuda'?(m.concepto||'DEUDA'):'PAGO '+m.metodo)} | ${m.tipo==='pago'?'-':''}${money(m.monto)}`;
+
+// ---------- Vistas ----------
+let view='home';
+const icons={home:'<path d="M3 11 12 3l9 8v10h-6v-6H9v6H3z"/>',clients:'<circle cx="12" cy="8" r="4.5"/><path d="M3.5 21c0-5 3.8-7 8.5-7s8.5 2 8.5 7z"/>',products:'<path d="m12 2 9 4.5v10L12 21l-9-4.5v-10zM3 6.5l9 4.5 9-4.5M12 11v10"/>'};
+function nav(){const t=(k,l)=>`<button class="${view===k||(k==='clients'&&view.startsWith('c:'))?'on':''}" onclick="go('${k}')"><svg viewBox="0 0 24 24">${icons[k]}</svg>${l}</button>`;return `<nav>${t('home','Home')}${t('clients','Clientes')}${t('products','Productos')}</nav>`}
+function go(v){view=v;render();scrollTo(0,0)}
+
+function vHome(){
+  const ult=[...db.movimientos].sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,5);
+  const top=db.clientes.map(c=>({c,s:saldo(c.id)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s).slice(0,3);
+  return `<header><h1>Día de Cobro</h1><div class="big"><span>Cuentas por Cobrar:</span><b>${money(total())}</b></div>
+  <button class="btn-w" onclick="movForm()"><i>+</i>REGISTRAR<br>MOVIMIENTO</button></header>
+  <h2>Últimos movimientos:</h2>
+  ${ult.length?ult.map(m=>`<button class="card mov" onclick="go('c:${m.clienteId}')"><span>${movLine(m).replace(/(\|[^|]*)$/,'<span class="t">$1</span>')}</span></button>`).join(''):'<p class="empty">Aún no hay movimientos. Registra la primera deuda o pago.</p>'}
+  ${db.movimientos.length>5?'<div class="center"><button class="btn" onclick="go(\'all\')">Ver todos...</button></div>':''}
+  <h2>Clientes con más deuda:</h2>
+  ${top.length?top.map(({c,s})=>cardCliente(c,s)).join(''):'<p class="empty">Nadie te debe por ahora.</p>'}`}
+
+const cardCliente=(c,s)=>`<button class="card" onclick="go('c:${c.id}')"><span>${esc(c.nombre.toUpperCase())} <small>${esc(c.telefono)}</small></span><span class="amt">${money(s)}</span></button>`;
+
+function vClients(){
+  const l=db.clientes.map(c=>({c,s:saldo(c.id)})).sort((a,b)=>b.s-a.s);
+  return `<header><h1>Clientes:</h1><div class="sub"><u>Clientes con deuda: ${l.filter(x=>x.s>0).length}</u></div>
+  <button class="btn-w" onclick="clienteForm()"><i>+</i>AGREGAR<br>CUENTA</button></header><br>
+  ${l.length?l.map(x=>cardCliente(x.c,x.s)).join(''):'<p class="empty">Agrega tu primer cliente con “Agregar cuenta”.</p>'}`}
+
+function vClient(id){
+  const c=cliente(id);if(!c){view='clients';return vClients()}
+  const ms=movsDe(id),s=saldo(id);
+  const deudas=ms.filter(m=>m.tipo==='deuda').reduce((a,m)=>a+m.monto,0),pagos=ms.filter(m=>m.tipo==='pago').reduce((a,m)=>a+m.monto,0);
+  return `<header><button class="back" onclick="go('clients')">← Clientes</button><h1 style="font-size:32px">${esc(c.nombre)}</h1><div class="sub">${esc(c.telefono)}</div>
+  <div class="big"><span>Debe:</span><b style="font-size:64px">${money(Math.max(0,s))}</b></div>
+  <div class="sub" style="font-size:14px">Deuda total ${money(deudas)} · Pagado ${money(pagos)}</div>
+  <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn-w" onclick="movForm('${id}')"><i>+</i>REGISTRAR<br>MOVIMIENTO</button><button class="btn-w" onclick="clienteForm('${id}')">EDITAR</button></div></header>
+  <h2>Historial:</h2>
+  ${ms.length?ms.map(m=>`<button class="card" onclick="movDetalle('${m.id}')"><span class="mov">${fdate(m.fecha)} | ${esc(m.tipo==='deuda'?(m.concepto||'Deuda'):'Pago · '+m.metodo+(m.referencia?' · Ref '+m.referencia:''))}</span><span class="amt ${m.tipo==='pago'?'p':''}">${m.tipo==='pago'?'-':''}${money(m.monto)}</span></button>`).join(''):'<p class="empty">Sin movimientos todavía.</p>'}`}
+
+function vAll(){const ms=[...db.movimientos].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  return `<header><button class="back" onclick="go('home')">← Inicio</button><h1>Movimientos</h1></header><br>${ms.map(m=>`<button class="card mov" onclick="go('c:${m.clienteId}')"><span>${movLine(m)}</span></button>`).join('')||'<p class="empty">Sin movimientos.</p>'}`}
+
+function vProducts(){return `<header><h1>Productos:</h1><div class="sub"><u>Total de productos: ${db.productos.length}</u></div>
+  <button class="btn-w" onclick="prodForm()"><i>+</i>AGREGAR<br>PRODUCTO</button></header><br>
+  ${db.productos.map(p=>`<button class="card" onclick="prodForm('${p.id}')"><span>${esc(p.nombre)}</span><span class="amt">${money(p.precio)}</span></button>`).join('')||'<p class="empty">Agrega tus productos para cargar deudas más rápido.</p>'}`}
+
+function render(){
+  const v=view,body=v==='home'?vHome():v==='clients'?vClients():v==='products'?vProducts():v==='all'?vAll():v.startsWith('c:')?vClient(v.slice(2)):vHome();
+  $('#app').innerHTML=body+nav();
+  if(v==='home'||v==='clients'||v.startsWith('c:'))if(db.clientes.length)$('#app').insertAdjacentHTML('beforeend',v==='clients'?'':`<button class="fab" onclick="movForm(${v.startsWith('c:')?`'${v.slice(2)}'`:''})">+ Movimiento</button>`);
+}
+
+// ---------- Modales ----------
+function modal(html){closeM();const d=document.createElement('div');d.className='modal';d.id='modal';d.innerHTML=`<div class="sheet" role="dialog">${html}</div>`;d.addEventListener('click',e=>{if(e.target===d)closeM()});document.body.appendChild(d)}
+const closeM=()=>$('#modal')?.remove();
+const val=id=>$('#'+id).value.trim();
+
+function clienteForm(id){const c=id?cliente(id):{nombre:'',telefono:''};
+  modal(`<h3>${id?'Editar cliente':'Nuevo cliente'}</h3><label>Nombre</label><input id="f-n" value="${esc(c.nombre)}"><label>Teléfono</label><input id="f-t" type="tel" value="${esc(c.telefono)}">
+  <div class="row"><button class="btn alt" onclick="closeM()">Cancelar</button><button class="btn" onclick="saveCliente('${id||''}')">Guardar</button></div>
+  ${id?`<div class="row"><button class="btn alt danger" onclick="delCliente('${id}')">Eliminar cliente</button></div>`:''}`)}
+function saveCliente(id){const n=val('f-n'),t=val('f-t');if(!n)return alert('Escribe el nombre del cliente.');
+  if(id){Object.assign(cliente(id),{nombre:n,telefono:t})}else{const c={id:uid(),nombre:n,telefono:t};db.clientes.push(c)}save();closeM();render()}
+function delCliente(id){if(!confirm('¿Eliminar este cliente y todo su historial?'))return;db.clientes=db.clientes.filter(c=>c.id!==id);db.movimientos=db.movimientos.filter(m=>m.clienteId!==id);save();closeM();go('clients')}
+
+function prodForm(id){const p=id?db.productos.find(x=>x.id===id):{nombre:'',precio:''};
+  modal(`<h3>${id?'Editar producto':'Nuevo producto'}</h3><label>Nombre</label><input id="f-n" value="${esc(p.nombre)}"><label>Precio ($)</label><input id="f-p" type="number" step="0.01" min="0" inputmode="decimal" value="${p.precio}">
+  <div class="row"><button class="btn alt" onclick="closeM()">Cancelar</button><button class="btn" onclick="saveProd('${id||''}')">Guardar</button></div>
+  ${id?`<div class="row"><button class="btn alt danger" onclick="delProd('${id}')">Eliminar producto</button></div>`:''}`)}
+function saveProd(id){const n=val('f-n'),p=parseFloat(val('f-p'));if(!n||isNaN(p)||p<0)return alert('Escribe el nombre y un precio válido.');
+  if(id)Object.assign(db.productos.find(x=>x.id===id),{nombre:n,precio:p});else db.productos.push({id:uid(),nombre:n,precio:p});save();closeM();render()}
+function delProd(id){if(!confirm('¿Eliminar producto? Los movimientos ya registrados no cambian.'))return;db.productos=db.productos.filter(x=>x.id!==id);save();closeM();render()}
+
+let tipo='deuda';
+function movForm(cid){
+  if(!db.clientes.length){alert('Primero agrega un cliente.');go('clients');return}
+  tipo='deuda';
+  modal(`<h3>Registrar movimiento</h3>
+  <label>Cliente</label><select id="m-c">${db.clientes.map(c=>`<option value="${c.id}" ${c.id===cid?'selected':''}>${esc(c.nombre)}</option>`).join('')}</select>
+  <label>Tipo</label><div class="seg"><button id="t-d" class="on" onclick="setTipo('deuda')">Deuda</button><button id="t-p" onclick="setTipo('pago')">Pago</button></div>
+  <div id="box-d"><label>Producto</label><select id="m-pr" onchange="calc()"><option value="">Otro / sin producto</option>${db.productos.map(p=>`<option value="${p.id}">${esc(p.nombre)} (${money(p.precio)})</option>`).join('')}</select>
+  <label>Cantidad</label><input id="m-q" type="number" min="1" value="1" inputmode="numeric" oninput="calc()"><label>Descripción</label><input id="m-d" placeholder="Ej: 2 tostones"></div>
+  <div id="box-p" hidden><label>Método de pago</label><select id="m-m" onchange="refVis()"><option>Efectivo</option><option>Pago móvil</option><option>Transferencia</option><option>Zelle</option><option>Otro</option></select>
+  <div id="box-r" hidden><label>Referencia</label><input id="m-r" inputmode="numeric"></div></div>
+  <label>Monto ($)</label><input id="m-a" type="number" step="0.01" min="0" inputmode="decimal">
+  <div class="row"><button class="btn alt" onclick="closeM()">Cancelar</button><button class="btn" onclick="saveMov()">Guardar</button></div>`)}
+function setTipo(t){tipo=t;$('#t-d').classList.toggle('on',t==='deuda');$('#t-p').classList.toggle('on',t==='pago');$('#box-d').hidden=t!=='deuda';$('#box-p').hidden=t!=='pago'}
+function refVis(){$('#box-r').hidden=$('#m-m').value==='Efectivo'}
+function calc(){const p=db.productos.find(x=>x.id===$('#m-pr').value),q=parseInt($('#m-q').value)||1;if(!p)return;$('#m-a').value=Math.round(p.precio*q*100)/100;$('#m-d').value=`${q} ${p.nombre}`}
+function saveMov(){const a=parseFloat(val('m-a'));if(isNaN(a)||a<=0)return alert('Escribe un monto mayor a 0.');
+  const m={id:uid(),clienteId:$('#m-c').value,tipo,monto:a,fecha:new Date().toISOString()};
+  if(tipo==='deuda')m.concepto=val('m-d');
+  else{m.metodo=$('#m-m').value;m.referencia=m.metodo==='Efectivo'?'':val('m-r');if(m.metodo!=='Efectivo'&&!m.referencia)return alert('Escribe la referencia del pago.')}
+  db.movimientos.push(m);save();closeM();render()}
+function movDetalle(id){const m=db.movimientos.find(x=>x.id===id);if(!m)return;
+  modal(`<h3>${m.tipo==='deuda'?'Deuda':'Pago'} de ${money(m.monto)}</h3><p>${fdate(m.fecha)}<br>${m.tipo==='deuda'?esc(m.concepto||'Sin descripción'):esc(m.metodo)+(m.referencia?'<br>Referencia: '+esc(m.referencia):'')}</p>
+  <div class="row"><button class="btn alt" onclick="closeM()">Cerrar</button><button class="btn alt danger" onclick="delMov('${id}')">Eliminar</button></div>`)}
+function delMov(id){if(!confirm('¿Eliminar este movimiento?'))return;db.movimientos=db.movimientos.filter(m=>m.id!==id);save();closeM();render()}
+
+render();
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script></body></html>
